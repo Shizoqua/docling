@@ -1,0 +1,59 @@
+name: Apply VLM cleanup guards
+
+on:
+  push:
+    branches:
+      - ci/apply-vlm-cleanup-fix
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: fix/vlm-cleanup-logging
+          token: ${{ github.token }}
+      - name: Apply cleanup logger guards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              "docling/models/inference_engines/vlm/vllm_engine.py": (
+                  '        _log.info("vLLM runtime cleaned up")\n',
+                  '        if _log is not None:\n            _log.info("vLLM runtime cleaned up")\n',
+              ),
+              "docling/models/inference_engines/vlm/auto_inline_engine.py": (
+                  '        _log.info("Auto-inline engine cleaned up")\n',
+                  '        if _log is not None:\n            _log.info("Auto-inline engine cleaned up")\n',
+              ),
+              "docling/models/inference_engines/vlm/mlx_engine.py": (
+                  '        _log.info("MLX runtime cleaned up")\n',
+                  '        if _log is not None:\n            _log.info("MLX runtime cleaned up")\n',
+              ),
+              "docling/models/inference_engines/vlm/transformers_engine.py": (
+                  '        _log.info("Transformers runtime cleaned up")',
+                  '        if _log is not None:\n            _log.info("Transformers runtime cleaned up")',
+              ),
+          }
+          for filename, (old, new) in replacements.items():
+              path = Path(filename)
+              text = path.read_text()
+              if text.count(old) != 1:
+                  raise SystemExit(f"expected exactly one target in {filename}")
+              path.write_text(text.replace(old, new))
+          PY
+      - name: Verify focused diff
+        run: |
+          git diff --check
+          git diff -- docling/models/inference_engines/vlm/vllm_engine.py docling/models/inference_engines/vlm/auto_inline_engine.py docling/models/inference_engines/vlm/mlx_engine.py docling/models/inference_engines/vlm/transformers_engine.py
+      - name: Commit and push source fix
+        run: |
+          git config user.name "Lanre Shittu"
+          git config user.email "136805224+Shizoqua@users.noreply.github.com"
+          git add docling/models/inference_engines/vlm/vllm_engine.py docling/models/inference_engines/vlm/auto_inline_engine.py docling/models/inference_engines/vlm/mlx_engine.py docling/models/inference_engines/vlm/transformers_engine.py
+          git commit --amend --no-edit -s
+          git push --force-with-lease origin HEAD:fix/vlm-cleanup-logging
