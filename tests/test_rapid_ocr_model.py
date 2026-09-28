@@ -75,7 +75,7 @@ def test_rapidocr_num_threads_propagated_per_engine(
     assert params[engine_key] == 4
 
 
-@pytest.mark.parametrize("backend", ["onnxruntime", "paddle", "torch"])
+@pytest.mark.parametrize("backend", ["onnxruntime", "paddle", "tensorrt", "torch"])
 def test_rapidocr_gpu_device_uses_cuda_ep_cfg_key(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -106,3 +106,12 @@ def test_rapidocr_pins_explicit_model_paths(
     assert params["Rec.model_path"] is not None
     assert "Det.lang_type" not in params
     assert "Rec.lang_type" not in params
+
+
+def test_rapidocr_tensorrt_backend_maps_to_engine():
+    from rapidocr.utils.typings import EngineType
+
+    from docling.models.stages.ocr.rapid_ocr_model import _backend_to_engine_type
+
+    assert RapidOcrOptions(backend="tensorrt").backend == "tensorrt"
+    assert _backend_to_engine_type("tensorrt") == EngineType.TENSORRT

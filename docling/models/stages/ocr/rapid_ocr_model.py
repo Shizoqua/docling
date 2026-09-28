@@ -319,6 +319,7 @@ def _backend_to_engine_type(backend: str) -> "EngineType":
         "onnxruntime": EngineType.ONNXRUNTIME,
         "openvino": EngineType.OPENVINO,
         "paddle": EngineType.PADDLE,
+        "tensorrt": EngineType.TENSORRT,
         "torch": EngineType.TORCH,
     }
     if backend not in engine_types:
